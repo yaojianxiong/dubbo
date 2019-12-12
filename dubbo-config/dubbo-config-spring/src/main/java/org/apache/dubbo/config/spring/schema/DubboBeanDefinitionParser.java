@@ -83,6 +83,7 @@ public class DubboBeanDefinitionParser implements BeanDefinitionParser {
         beanDefinition.setBeanClass(beanClass);
         beanDefinition.setLazyInit(false);
         String id = element.getAttribute("id");
+
         if (StringUtils.isEmpty(id) && required) {
             String generatedBeanName = element.getAttribute("name");
             if (StringUtils.isEmpty(generatedBeanName)) {

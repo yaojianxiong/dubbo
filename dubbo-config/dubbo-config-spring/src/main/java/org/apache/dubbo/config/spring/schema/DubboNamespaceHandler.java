@@ -47,6 +47,9 @@ import static com.alibaba.spring.util.AnnotatedBeanDefinitionRegistryUtils.regis
  * DubboNamespaceHandler
  *
  * @export
+ * 整合Spring自定义<dubbo></dubbo>标签解析
+ * spring通过spring.handlers文件，然后通过解析名称空间(http://dubbo.apache.org/schema/dubbo)的时候找到对应的实现类org.apache.dubbo.config.spring.schema.DubboNamespaceHandler
+ *
  */
 public class DubboNamespaceHandler extends NamespaceHandlerSupport implements ConfigurableSourceBeanMetadataElement {
 
@@ -56,6 +59,7 @@ public class DubboNamespaceHandler extends NamespaceHandlerSupport implements Co
 
     @Override
     public void init() {
+        //注册标签相关后缀名对应的解析器
         registerBeanDefinitionParser("application", new DubboBeanDefinitionParser(ApplicationConfig.class, true));
         registerBeanDefinitionParser("module", new DubboBeanDefinitionParser(ModuleConfig.class, true));
         registerBeanDefinitionParser("registry", new DubboBeanDefinitionParser(RegistryConfig.class, true));

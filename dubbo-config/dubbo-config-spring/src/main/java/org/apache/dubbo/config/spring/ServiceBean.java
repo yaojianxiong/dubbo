@@ -36,6 +36,15 @@ import org.springframework.context.ApplicationEventPublisherAware;
  * ServiceFactoryBean
  *
  * @export
+ *
+ * InitializingBean 初始化方法
+ * DisposableBean 销毁回调方法
+ * ApplicationContextAware 回调设置容器
+ * BeanNameAware 回调设置beanName
+ * ApplicationEventPublisherAware 回调设置事件发布器
+ *
+ * extends ServiceConfig
+ *
  */
 public class ServiceBean<T> extends ServiceConfig<T> implements InitializingBean, DisposableBean,
         ApplicationContextAware, BeanNameAware,
@@ -64,6 +73,7 @@ public class ServiceBean<T> extends ServiceConfig<T> implements InitializingBean
 
     @Override
     public void setApplicationContext(ApplicationContext applicationContext) {
+        //实现ApplicationContextAware接口 回调设置applicationContext
         this.applicationContext = applicationContext;
         SpringExtensionFactory.addApplicationContext(applicationContext);
     }

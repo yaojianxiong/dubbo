@@ -35,6 +35,7 @@ import java.util.Set;
 
 /**
  * SpringExtensionFactory
+ * spring拓展容器
  */
 public class SpringExtensionFactory implements ExtensionFactory {
     private static final Logger logger = LoggerFactory.getLogger(SpringExtensionFactory.class);
@@ -48,6 +49,7 @@ public class SpringExtensionFactory implements ExtensionFactory {
             ((ConfigurableApplicationContext) context).registerShutdownHook();
             DubboShutdownHook.getDubboShutdownHook().unregister();
         }
+        //反射获取实现类的addApplicationListener类方法进行调用。。。
         ApplicationContextUtils.addApplicationListener(context, SHUTDOWN_HOOK_LISTENER);
     }
 

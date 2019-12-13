@@ -83,6 +83,7 @@ public class DubboBeanDefinitionParser implements BeanDefinitionParser {
         beanDefinition.setBeanClass(beanClass);
         beanDefinition.setLazyInit(false);
         String id = element.getAttribute("id");
+        //生成beanName
         if (StringUtils.isEmpty(id) && required) {
             String generatedBeanName = element.getAttribute("name");
             if (StringUtils.isEmpty(generatedBeanName)) {
@@ -102,12 +103,15 @@ public class DubboBeanDefinitionParser implements BeanDefinitionParser {
             }
         }
         if (StringUtils.isNotEmpty(id)) {
+            //判断beanName是否重复
             if (parserContext.getRegistry().containsBeanDefinition(id)) {
                 throw new IllegalStateException("Duplicate spring bean id " + id);
             }
+            //注入Spring容器
             parserContext.getRegistry().registerBeanDefinition(id, beanDefinition);
             beanDefinition.getPropertyValues().addPropertyValue("id", id);
         }
+        //协议解析bdf设置
         if (ProtocolConfig.class.equals(beanClass)) {
             for (String name : parserContext.getRegistry().getBeanDefinitionNames()) {
                 BeanDefinition definition = parserContext.getRegistry().getBeanDefinition(name);
@@ -119,33 +123,46 @@ public class DubboBeanDefinitionParser implements BeanDefinitionParser {
                     }
                 }
             }
+            //解析Service bdf --><dubbo:service>
         } else if (ServiceBean.class.equals(beanClass)) {
+            //获取需要暴露服务的类名
             String className = element.getAttribute("class");
             if (StringUtils.isNotEmpty(className)) {
                 RootBeanDefinition classDefinition = new RootBeanDefinition();
+                //ReflectUtils.forName java spi机制加载类字节码
                 classDefinition.setBeanClass(ReflectUtils.forName(className));
                 classDefinition.setLazyInit(false);
+                //解析嵌套properties标签
                 parseProperties(element.getChildNodes(), classDefinition);
+                //将暴露服务className加入ServiceBean bdf的属性里面
                 beanDefinition.getPropertyValues().addPropertyValue("ref", new BeanDefinitionHolder(classDefinition, id + "Impl"));
             }
         } else if (ProviderConfig.class.equals(beanClass)) {
+            //解析Provider
             parseNested(element, parserContext, ServiceBean.class, true, "service", "provider", id, beanDefinition);
         } else if (ConsumerConfig.class.equals(beanClass)) {
+            //解析Consumer
             parseNested(element, parserContext, ReferenceBean.class, false, "reference", "consumer", id, beanDefinition);
         }
         Set<String> props = new HashSet<>();
         ManagedMap parameters = null;
+        //获取这些配置bean的setter方法
         for (Method setter : beanClass.getMethods()) {
             String name = setter.getName();
             if (name.length() > 3 && name.startsWith("set")
                     && Modifier.isPublic(setter.getModifiers())
                     && setter.getParameterTypes().length == 1) {
+                //setter方法的第一个参数，即为复值属性类型
                 Class<?> type = setter.getParameterTypes()[0];
+                //取到属性名称...
                 String beanProperty = name.substring(3, 4).toLowerCase() + name.substring(4);
+                //根据大小写分隔，将驼峰命名转成-形式命名
                 String property = StringUtils.camelToSplitName(beanProperty, "-");
+                //缓存起来
                 props.add(property);
                 // check the setter/getter whether match
                 Method getter = null;
+                //判断该set属性是否有get方法
                 try {
                     getter = beanClass.getMethod("get" + name.substring(3), new Class<?>[0]);
                 } catch (NoSuchMethodException e) {
@@ -156,11 +173,14 @@ public class DubboBeanDefinitionParser implements BeanDefinitionParser {
                         // ApplicationAware, etc. They only have setter method, otherwise will cause the error log during application start up.
                     }
                 }
+                //没有get方法或者不是公开的或返回类型不匹配都返回
                 if (getter == null
                         || !Modifier.isPublic(getter.getModifiers())
                         || !type.equals(getter.getReturnType())) {
                     continue;
                 }
+                //parameters,methods,arguments 如果这3个属性 则解析相关子标签 如<dubbo:methods>
+                //其中methods,arguments 将解析结果加入beanDefinition
                 if ("parameters".equals(property)) {
                     parameters = parseParameters(element.getChildNodes(), beanDefinition);
                 } else if ("methods".equals(property)) {
@@ -168,13 +188,18 @@ public class DubboBeanDefinitionParser implements BeanDefinitionParser {
                 } else if ("arguments".equals(property)) {
                     parseArguments(id, element.getChildNodes(), beanDefinition, parserContext);
                 } else {
+                    //不是以上配置名
+                    //则从element获取属性配置的值
                     String value = element.getAttribute(property);
                     if (value != null) {
                         value = value.trim();
                         if (value.length() > 0) {
+                            //如果注册地址是空
                             if ("registry".equals(property) && RegistryConfig.NO_AVAILABLE.equalsIgnoreCase(value)) {
+                                //设置registryConfig配置，并且注册地址为空
                                 RegistryConfig registryConfig = new RegistryConfig();
                                 registryConfig.setAddress(RegistryConfig.NO_AVAILABLE);
+                                //将registryConfig 设置进bdf
                                 beanDefinition.getPropertyValues().addPropertyValue(beanProperty, registryConfig);
                             } else if ("provider".equals(property) || "registry".equals(property) || ("protocol".equals(property) && ServiceBean.class.equals(beanClass))) {
                                 /**
@@ -183,9 +208,12 @@ public class DubboBeanDefinitionParser implements BeanDefinitionParser {
                                  * 1. Spring, check existing bean by id, see{@link ServiceBean#afterPropertiesSet()}; then try to use id to find configs defined in remote Config Center
                                  * 2. API, directly use id to find configs defined in remote Config Center; if all config instances are defined locally, please use {@link ServiceConfig#setRegistries(List)}
                                  */
+                                //设置 provider，registry，如果ServiceBean 设置protocol
+                                //bdf里面的属性名property+Ids
                                 beanDefinition.getPropertyValues().addPropertyValue(beanProperty + "Ids", value);
                             } else {
                                 Object reference;
+                                //是否是基础数据类型和特殊类型
                                 if (isPrimitive(type)) {
                                     if ("async".equals(property) && "false".equals(value)
                                             || "timeout".equals(property) && "0".equals(value)
@@ -204,6 +232,7 @@ public class DubboBeanDefinitionParser implements BeanDefinitionParser {
                                     reference = new RuntimeBeanReference(ref);
                                     beanDefinition.getPropertyValues().addPropertyValue(property + METHOD, method);
                                 } else {
+                                    //如果是ref属性 则从容器中获取，并且必须是单例
                                     if ("ref".equals(property) && parserContext.getRegistry().containsBeanDefinition(value)) {
                                         BeanDefinition refBean = parserContext.getRegistry().getBeanDefinition(value);
                                         if (!refBean.isSingleton()) {
@@ -212,6 +241,7 @@ public class DubboBeanDefinitionParser implements BeanDefinitionParser {
                                     }
                                     reference = new RuntimeBeanReference(value);
                                 }
+                                //使用RuntimeBeanReference封装相关属性 加入bdf属性
                                 beanDefinition.getPropertyValues().addPropertyValue(beanProperty, reference);
                             }
                         }
@@ -224,6 +254,8 @@ public class DubboBeanDefinitionParser implements BeanDefinitionParser {
         for (int i = 0; i < len; i++) {
             Node node = attributes.item(i);
             String name = node.getLocalName();
+            //如果name不在缓存的名字里面，则设置进parameters中
+            //这里可能考虑的是一些特殊的属性
             if (!props.contains(name)) {
                 if (parameters == null) {
                     parameters = new ManagedMap();
@@ -232,6 +264,7 @@ public class DubboBeanDefinitionParser implements BeanDefinitionParser {
                 parameters.put(name, new TypedStringValue(value, String.class));
             }
         }
+        //如果 parameters 不为空 设置进bdf
         if (parameters != null) {
             beanDefinition.getPropertyValues().addPropertyValue("parameters", parameters);
         }

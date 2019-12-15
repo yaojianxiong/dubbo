@@ -497,7 +497,7 @@ public class DubboBootstrap extends GenericEventListener {
         if (!initialized.compareAndSet(false, true)) {
             return;
         }
-
+        //初始化框架相关扩展。调用initialize方法
         ApplicationModel.iniFrameworkExts();
 
         startConfigCenter();
@@ -692,21 +692,24 @@ public class DubboBootstrap extends GenericEventListener {
      */
     public DubboBootstrap start() {
         if (started.compareAndSet(false, true)) {
-            initialize();
+            initialize();//初始化配置
             if (logger.isInfoEnabled()) {
                 logger.info(NAME + " is starting...");
             }
             // 1. export Dubbo Services
+            //暴露所有services服务
             exportServices();
 
             // Not only provider register
             if (!isOnlyRegisterProvider() || hasExportedServices()) {
                 // 2. export MetadataService
+                //把 serviceConfig元数据基本信息进行暴露
                 exportMetadataService();
                 //3. Register the local ServiceInstance if required
+                //dubbo本地服务暴露的支持
                 registerServiceInstance();
             }
-
+            //依赖服务
             referServices();
 
             if (logger.isInfoEnabled()) {
@@ -855,11 +858,12 @@ public class DubboBootstrap extends GenericEventListener {
     }
 
     private void exportServices() {
+        //拿到所有dubbo服务进行暴露
         configManager.getServices().forEach(sc -> {
             // TODO, compatible with ServiceConfig.export()
             ServiceConfig serviceConfig = (ServiceConfig) sc;
             serviceConfig.setBootstrap(this);
-
+            //异步方式暴露服务
             if (exportAsync) {
                 ExecutorService executor = executorRepository.getServiceExporterExecutor();
                 Future<?> future = executor.submit(() -> {
@@ -867,6 +871,7 @@ public class DubboBootstrap extends GenericEventListener {
                 });
                 asyncExportingFutures.add(future);
             } else {
+                //暴露服务并记录
                 sc.export();
                 exportedServices.add(sc);
             }

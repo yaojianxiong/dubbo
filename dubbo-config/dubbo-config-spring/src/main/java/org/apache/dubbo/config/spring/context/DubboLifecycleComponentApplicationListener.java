@@ -51,6 +51,7 @@ public class DubboLifecycleComponentApplicationListener implements ApplicationLi
         }
 
         if (event instanceof ContextRefreshedEvent) {
+            //监听Spring容器启动事件，Spring容器启动后则启动dubbo
             onContextRefreshedEvent((ContextRefreshedEvent) event);
         } else if (event instanceof ContextClosedEvent) {
             onContextClosedEvent((ContextClosedEvent) event);
@@ -59,10 +60,13 @@ public class DubboLifecycleComponentApplicationListener implements ApplicationLi
 
     protected void onContextRefreshedEvent(ContextRefreshedEvent event) {
         ApplicationContext context = event.getApplicationContext();
+        //从Spring容器中加载dubbo引导主程序
         DubboBootstrap bootstrap = loadBootsttrapAsBean(context);
+        //如果Spring没管理则使用程序默认初始化的引导程序实例
         if (bootstrap == null) {
             bootstrap = DubboBootstrap.getInstance();
         }
+        //启动dubbo
         bootstrap.start();
     }
 

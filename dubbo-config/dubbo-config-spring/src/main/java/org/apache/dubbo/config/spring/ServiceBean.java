@@ -75,6 +75,7 @@ public class ServiceBean<T> extends ServiceConfig<T> implements InitializingBean
     public void setApplicationContext(ApplicationContext applicationContext) {
         //实现ApplicationContextAware接口 回调设置applicationContext
         this.applicationContext = applicationContext;
+        //容器加入缓存
         SpringExtensionFactory.addApplicationContext(applicationContext);
     }
 
@@ -119,8 +120,11 @@ public class ServiceBean<T> extends ServiceConfig<T> implements InitializingBean
      */
     @Override
     public void exported() {
+        //这里先调的是ServiceConfig的exported
         super.exported();
         // Publish ServiceBeanExportedEvent
+        //发布ServiceBeanExportedEvent事件
+        //同时在ReferenceAnnotationBeanPostProcessor进行监听服务暴露进行相关bean依赖
         publishExportEvent();
     }
 

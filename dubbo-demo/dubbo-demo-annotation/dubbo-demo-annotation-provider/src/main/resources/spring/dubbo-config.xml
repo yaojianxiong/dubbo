@@ -1,0 +1,23 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<beans xmlns="http://www.springframework.org/schema/beans"
+       xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance"
+       xmlns:dubbo="http://code.alibabatech.com/schema/dubbo"
+       xsi:noNamespaceSchemaLocation="classpath:xsd/dubbo.xsd"
+       xsi:schemaLocation="http://www.springframework.org/schema/beans	http://www.springframework.org/schema/beans/spring-beans-4.2.xsd
+						http://code.alibabatech.com/schema/dubbo http://code.alibabatech.com/schema/dubbo/dubbo.xsd">
+
+    <!-- 服务提供者(provider)信息，用于计算依赖关系 -->
+    <dubbo:application name="dubbo-demo-annotation-provider"/>
+
+    <!-- 用dubbo协议在20880端口暴露服务 -->
+    <dubbo:protocol name="dubbo" port="20880"/>
+
+    <!-- file="${dubbo.cache.file}" 定义dubbo缓存文件位置 -->
+    <dubbo:registry protocol="zookeeper" address="zookeeper://127.0.0.1:2181" client="curator"/>
+
+    <!--新增过滤器-->
+    <dubbo:provider retries="5" timeout="60000" loadbalance="leastactive" executes="2000" threads="2000" actives="2000"/>
+
+    <!-- 启动时检查所有服务的可用性,任何服务不可以均会导致系统无法启动,filter="identityInjectFilter" -->
+    <dubbo:consumer check="false" timeout="60000" retries="5" loadbalance="leastactive" actives="2000" />
+</beans>

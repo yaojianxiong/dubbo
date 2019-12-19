@@ -44,6 +44,9 @@ public class AdaptiveExtensionFactory implements ExtensionFactory {
     @Override
     public <T> T getExtension(Class<T> type, String name) {
         for (ExtensionFactory factory : factories) {
+            //从扩展工厂去加载实例
+            // dubbo的spi实际上是调用(ExtensionLoader)loader.getAdaptiveExtension()
+            // spring实际上是返回容器中的bean
             T extension = factory.getExtension(type, name);
             if (extension != null) {
                 return extension;

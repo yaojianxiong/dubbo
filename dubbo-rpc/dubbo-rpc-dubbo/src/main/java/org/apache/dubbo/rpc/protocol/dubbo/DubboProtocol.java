@@ -282,13 +282,18 @@ public class DubboProtocol extends AbstractProtocol {
         URL url = invoker.getUrl();
 
         // export service.
+        // 获取服务标识，理解成服务坐标也行。由服务组名，服务名，服务版本号以及端口组成。比如：
+        // demoGroup/com.alibaba.dubbo.demo.DemoService:1.0.1:20880
         String key = serviceKey(url);
         DubboExporter<T> exporter = new DubboExporter<T>(invoker, key, exporterMap);
+        //将key exporter 加入缓存
         exporterMap.put(key, exporter);
 
         //export an stub service for dispatching event
+        //是否支持本地存根
         Boolean isStubSupportEvent = url.getParameter(STUB_EVENT_KEY, DEFAULT_STUB_EVENT);
         Boolean isCallbackservice = url.getParameter(IS_CALLBACK_SERVICE, false);
+        //对本地存根的支持
         if (isStubSupportEvent && !isCallbackservice) {
             String stubServiceMethods = url.getParameter(STUB_EVENT_METHODS_KEY);
             if (stubServiceMethods == null || stubServiceMethods.length() == 0) {
@@ -301,8 +306,9 @@ public class DubboProtocol extends AbstractProtocol {
                 stubServiceMethodsMap.put(url.getServiceKey(), stubServiceMethods);
             }
         }
-
+        //打开服务器 默认netty
         openServer(url);
+        //优化序列化
         optimizeSerialization(url);
 
         return exporter;
@@ -310,11 +316,15 @@ public class DubboProtocol extends AbstractProtocol {
 
     private void openServer(URL url) {
         // find server.
+        //服务器地址
         String key = url.getAddress();
         //client can export a service which's only for server to invoke
         boolean isServer = url.getParameter(IS_SERVER_KEY, true);
+        //默认true
         if (isServer) {
+            //从缓存中获取
             ProtocolServer server = serverMap.get(key);
+            //双重检查
             if (server == null) {
                 synchronized (this) {
                     server = serverMap.get(key);
@@ -324,6 +334,7 @@ public class DubboProtocol extends AbstractProtocol {
                 }
             } else {
                 // server supports reset, use together with override
+                //重置服务
                 server.reset(url);
             }
         }
@@ -334,6 +345,7 @@ public class DubboProtocol extends AbstractProtocol {
                 // send readonly event when server closes, it's enabled by default
                 .addParameterIfAbsent(CHANNEL_READONLYEVENT_SENT_KEY, Boolean.TRUE.toString())
                 // enable heartbeat by default
+                //默认心跳60 * 1000
                 .addParameterIfAbsent(HEARTBEAT_KEY, String.valueOf(DEFAULT_HEARTBEAT))
                 .addParameter(CODEC_KEY, DubboCodec.NAME)
                 .build();
@@ -345,6 +357,8 @@ public class DubboProtocol extends AbstractProtocol {
 
         ExchangeServer server;
         try {
+            //Exchanger 默认为HeaderExchanger  --> Transporters.bind 默认为NettyTransporter 现在版本为netty4
+            //requestHandler作为netty的委派处理器监听相关事件进行回调处理
             server = Exchangers.bind(url, requestHandler);
         } catch (RemotingException e) {
             throw new RpcException("Fail to start server(url: " + url + ") " + e.getMessage(), e);
@@ -357,7 +371,7 @@ public class DubboProtocol extends AbstractProtocol {
                 throw new RpcException("Unsupported client type: " + str);
             }
         }
-
+        //对ExchangeServer进行封装返回
         return new DubboProtocolServer(server);
     }
 

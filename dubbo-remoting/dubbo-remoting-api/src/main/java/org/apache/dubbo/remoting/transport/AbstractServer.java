@@ -56,6 +56,8 @@ public abstract class AbstractServer extends AbstractEndpoint implements Remotin
     private ExecutorRepository executorRepository = ExtensionLoader.getExtensionLoader(ExecutorRepository.class).getDefaultExtension();
 
     public AbstractServer(URL url, ChannelHandler handler) throws RemotingException {
+        //初始化相关成员变量
+        //getChannelCodec(url); codec2默认是telnet
         super(url, handler);
         localAddress = getUrl().toInetSocketAddress();
 
@@ -68,6 +70,7 @@ public abstract class AbstractServer extends AbstractEndpoint implements Remotin
         this.accepts = url.getParameter(ACCEPTS_KEY, DEFAULT_ACCEPTS);
         this.idleTimeout = url.getParameter(IDLE_TIMEOUT_KEY, DEFAULT_IDLE_TIMEOUT);
         try {
+            //回调子类方法
             doOpen();
             if (logger.isInfoEnabled()) {
                 logger.info("Start " + getClass().getSimpleName() + " bind " + getBindAddress() + ", export " + getLocalAddress());

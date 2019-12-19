@@ -429,6 +429,7 @@ public class ServiceConfig<T> extends ServiceConfigBase<T> {
         URL url = new URL(name, host, port, getContextPath(protocolConfig).map(p -> p + "/" + path).orElse(path), map);
 
         // You can customize Configurator to append extra parameters
+        //根据spi扩展机制 自己定制ConfiguratorFactory 来设置url
         if (ExtensionLoader.getExtensionLoader(ConfiguratorFactory.class)
                 .hasExtension(url.getProtocol())) {
             url = ExtensionLoader.getExtensionLoader(ConfiguratorFactory.class)
@@ -440,6 +441,7 @@ public class ServiceConfig<T> extends ServiceConfigBase<T> {
         if (!SCOPE_NONE.equalsIgnoreCase(scope)) {
 
             // export to local if the config is not remote (export to remote only when config is remote)
+            //本地暴露服务 injvm
             if (!SCOPE_REMOTE.equalsIgnoreCase(scope)) {
                 exportLocal(url);
             }
@@ -469,10 +471,12 @@ public class ServiceConfig<T> extends ServiceConfigBase<T> {
                         if (StringUtils.isNotEmpty(proxy)) {
                             registryURL = registryURL.addParameter(PROXY_KEY, proxy);
                         }
-
+                        //把注册中心的地址和dubbo协议的地址连接起来
+                        //registry://127.0.0.1:2181/com.alibaba.dubbo.registry.RegistryService?application=user-service-provider&dubbo=2.6.2&export=dubbo://192.168.56.1:20882/com.atguigu.gmall.service.UserService?anyhost=true&application=user-service-provider&bind.ip=192.168.56.1&bind.port=20882&default.timeout=1000&dubbo=2.6.2&generic=false&getUserAddressList.timeout=1000&interface=com.atguigu.gmall.service.UserService&methods=getUserAddressList&monitor=dubbo%3A%2F%2F127.0.0.1%3A2181%2Fcom.alibaba.dubbo.registry.RegistryService%3Fapplication%3Duser-service-provider%26dubbo%3D2.6.2%26pid%3D11008%26protocol%3Dregistry%26refer%3Ddubbo%253D2.6.2%2526interface%253Dcom.alibaba.dubbo.monitor.MonitorService%2526pid%253D11008%2526timestamp%253D1576466341305%26registry%3Dzookeeper%26timestamp%3D1576465933830&pid=11008&revision=1.0.0&side=provider&timeout=1000&timestamp=1576465986849&version=1.0.0&pid=11008&registry=zookeeper&timestamp=1576465933830
                         Invoker<?> invoker = PROXY_FACTORY.getInvoker(ref, (Class) interfaceClass, registryURL.addParameterAndEncoded(EXPORT_KEY, url.toFullString()));
                         DelegateProviderMetaDataInvoker wrapperInvoker = new DelegateProviderMetaDataInvoker(invoker, this);
-                        //暴露包装后的代理服务
+                        //根据协议暴露包装后的代理服务
+                        //调用先后（根据spi机制） ProtocolFilterWrapper --> ProtocolListenerWrapper --> url匹配的协议
                         Exporter<?> exporter = protocol.export(wrapperInvoker);
                         exporters.add(exporter);
                     }
@@ -482,8 +486,9 @@ public class ServiceConfig<T> extends ServiceConfigBase<T> {
                     }
                     Invoker<?> invoker = PROXY_FACTORY.getInvoker(ref, (Class) interfaceClass, url);
                     DelegateProviderMetaDataInvoker wrapperInvoker = new DelegateProviderMetaDataInvoker(invoker, this);
-
+                    //ProtocolFilterWrapper --> ProtocolListenerWrapper --> url匹配的协议
                     Exporter<?> exporter = protocol.export(wrapperInvoker);
+                    //把暴露返回结果加入exporters缓存，这里多个协议可能是多个暴露结果
                     exporters.add(exporter);
                 }
                 /**

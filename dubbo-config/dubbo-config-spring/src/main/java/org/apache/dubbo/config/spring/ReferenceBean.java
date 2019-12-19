@@ -41,6 +41,7 @@ import static org.springframework.beans.factory.BeanFactoryUtils.beansOfTypeIncl
 
 /**
  * ReferenceFactoryBean
+ * 实现FactoryBean 提供生产对象功能，并且在spring容器中存在
  */
 public class ReferenceBean<T> extends ReferenceConfig<T> implements FactoryBean,
         ApplicationContextAware, InitializingBean, DisposableBean {
@@ -101,6 +102,7 @@ public class ReferenceBean<T> extends ReferenceConfig<T> implements FactoryBean,
     public void afterPropertiesSet() throws Exception {
 
         // Initializes Dubbo's Config Beans before @Reference bean autowiring
+        //对dubbo相关对象进行初始化
         prepareDubboConfigBeans();
 
         // lazy init by default.
@@ -109,6 +111,7 @@ public class ReferenceBean<T> extends ReferenceConfig<T> implements FactoryBean,
         }
 
         // eager init if necessary.
+        //默认是懒汉模式，不进行初始化
         if (shouldInit()) {
             getObject();
         }

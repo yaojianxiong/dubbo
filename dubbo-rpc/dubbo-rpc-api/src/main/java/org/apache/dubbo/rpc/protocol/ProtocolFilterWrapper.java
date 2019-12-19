@@ -51,11 +51,13 @@ public class ProtocolFilterWrapper implements Protocol {
 
     private static <T> Invoker<T> buildInvokerChain(final Invoker<T> invoker, String key, String group) {
         Invoker<T> last = invoker;
+        //根据key 用户自定义的拦截器 组别名group  来匹配上对应的拦截器链
         List<Filter> filters = ExtensionLoader.getExtensionLoader(Filter.class).getActivateExtension(invoker.getUrl(), key, group);
 
         if (!filters.isEmpty()) {
             for (int i = filters.size() - 1; i >= 0; i--) {
                 final Filter filter = filters.get(i);
+                //把过滤器封装成链路 实现invoker的链式调用
                 final Invoker<T> next = last;
                 last = new Invoker<T>() {
 
@@ -78,6 +80,7 @@ public class ProtocolFilterWrapper implements Protocol {
                     public Result invoke(Invocation invocation) throws RpcException {
                         Result asyncResult;
                         try {
+                            //拦截器执行
                             asyncResult = filter.invoke(next, invocation);
                         } catch (Exception e) {
                             if (filter instanceof ListenableFilter) {// Deprecated!
@@ -93,6 +96,7 @@ public class ProtocolFilterWrapper implements Protocol {
                         } finally {
 
                         }
+                        //完成后回调的方法 如果是filter实现相关监听器接口 回调监听器相关方法
                         return asyncResult.whenCompleteWithContext((r, t) -> {
                             if (filter instanceof ListenableFilter) {// Deprecated!
                                 Filter.Listener listener = ((ListenableFilter) filter).listener();
@@ -137,9 +141,11 @@ public class ProtocolFilterWrapper implements Protocol {
 
     @Override
     public <T> Exporter<T> export(Invoker<T> invoker) throws RpcException {
+        //如果url对应的协议参数是registry类型或者其他类型跳过该链路执行下一个链路
         if (UrlUtils.isRegistry(invoker.getUrl())) {
             return protocol.export(invoker);
         }
+        //buildInvokerChain  对invoker进行封装 构成建拦截器链
         return protocol.export(buildInvokerChain(invoker, SERVICE_FILTER_KEY, CommonConstants.PROVIDER));
     }
 

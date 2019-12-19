@@ -147,6 +147,7 @@ public class ReferenceConfig<T> extends ReferenceConfigBase<T> {
         if (destroyed) {
             throw new IllegalStateException("The invoker of ReferenceConfig(" + url + ") has already destroyed!");
         }
+        //没有ref则初始化
         if (ref == null) {
             init();
         }
@@ -177,7 +178,7 @@ public class ReferenceConfig<T> extends ReferenceConfigBase<T> {
         if (initialized) {
             return;
         }
-
+        //没有dubboBootstrap实例则进行dubbo初始化
         if (bootstrap == null) {
             bootstrap = DubboBootstrap.getInstance();
             bootstrap.init();
@@ -379,11 +380,14 @@ public class ReferenceConfig<T> extends ReferenceConfigBase<T> {
         if (StringUtils.isEmpty(interfaceName)) {
             throw new IllegalStateException("<dubbo:reference interface=\"\" /> interface not allow null!");
         }
+        //consumer相关配置属性赋给reference对象
         completeCompoundConfigs();
         // get consumer's global configuration
+        //检测 consumer 变量是否为空，为空则创建
         checkDefault();
         this.refresh();
         if (getGeneric() == null && getConsumer() != null) {
+            //设置Generic
             setGeneric(getConsumer().getGeneric());
         }
         if (ProtocolUtils.isGeneric(generic)) {

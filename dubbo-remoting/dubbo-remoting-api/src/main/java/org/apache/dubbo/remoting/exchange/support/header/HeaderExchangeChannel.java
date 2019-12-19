@@ -132,6 +132,7 @@ final class HeaderExchangeChannel implements ExchangeChannel {
         req.setData(request);
         DefaultFuture future = DefaultFuture.newFuture(channel, req, timeout, executor);
         try {
+            // 首先会调用 com.alibaba.dubbo.remoting.transport.netty.NettyClient 的 send() 方法
             channel.send(req);
         } catch (RemotingException e) {
             future.cancel();

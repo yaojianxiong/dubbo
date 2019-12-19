@@ -129,6 +129,9 @@ public class RegistryProtocol implements Protocol {
     //providerurl <--> exporter
     private final ConcurrentMap<String, ExporterChangeableWrapper<?>> bounds = new ConcurrentHashMap<>();
     private Cluster cluster;
+    //这里的protocol是通过反射set复制进来的
+    //并且是adptive工厂根据spi实现，返回adptive类
+    //SpiExtensionFactory#getExtension(Class<T> type, String name)
     private Protocol protocol;
     private RegistryFactory registryFactory;
     private ProxyFactory proxyFactory;
@@ -184,23 +187,31 @@ public class RegistryProtocol implements Protocol {
 
     @Override
     public <T> Exporter<T> export(final Invoker<T> originInvoker) throws RpcException {
+        //注册中心协议
         URL registryUrl = getRegistryUrl(originInvoker);
         // url to export locally
+        //提供者协议
         URL providerUrl = getProviderUrl(originInvoker);
 
         // Subscribe the override data
         // FIXME When the provider subscribes, it will affect the scene : a certain JVM exposes the service and call
         //  the same service. Because the subscribed is cached key with the name of the service, it causes the
         //  subscription information to cover.
+        //修正
+        // 当提供者订阅时，它将影响场景：某个JVM公开服务并调用同一个服务。
+        // 因为订阅的是带有服务名称的缓存密钥，所以它会导致订阅信息被覆盖。
         final URL overrideSubscribeUrl = getSubscribedOverrideUrl(providerUrl);
         final OverrideListener overrideSubscribeListener = new OverrideListener(overrideSubscribeUrl, originInvoker);
         overrideListeners.put(overrideSubscribeUrl, overrideSubscribeListener);
 
         providerUrl = overrideUrlWithConfig(providerUrl, overrideSubscribeListener);
         //export invoker
+        //暴露注冊协议对应的提供者协议
         final ExporterChangeableWrapper<T> exporter = doLocalExport(originInvoker, providerUrl);
 
         // url to registry
+        //获取注册中心 默认是zk实现
+        //返回ZookeeperRegistry
         final Registry registry = getRegistry(originInvoker);
         final URL registeredProviderUrl = getUrlToRegistry(providerUrl, registryUrl);
         // decide if we need to delay publish
@@ -210,6 +221,7 @@ public class RegistryProtocol implements Protocol {
         }
 
         // Deprecated! Subscribe to override rules in 2.6.x or before.
+        //ZookeeperRegistry -->doSubscribe 基于zk的watch机制 注册监听事件
         registry.subscribe(overrideSubscribeUrl, overrideSubscribeListener);
 
         exporter.setRegisterUrl(registeredProviderUrl);
@@ -231,6 +243,7 @@ public class RegistryProtocol implements Protocol {
 
         return (ExporterChangeableWrapper<T>) bounds.computeIfAbsent(key, s -> {
             Invoker<?> invokerDelegate = new InvokerDelegate<>(originInvoker, providerUrl);
+            //根据协议暴露服务，默认dubbo协议  protocol为适配类
             return new ExporterChangeableWrapper<>((Exporter<T>) protocol.export(invokerDelegate), originInvoker);
         });
     }

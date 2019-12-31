@@ -70,6 +70,7 @@ public class ProtocolListenerWrapper implements Protocol {
         if (UrlUtils.isRegistry(url)) {
             return protocol.refer(type, url);
         }
+        //对ref结果的封装
         return new ListenerInvokerWrapper<T>(protocol.refer(type, url),
                 Collections.unmodifiableList(
                         ExtensionLoader.getExtensionLoader(InvokerListener.class)

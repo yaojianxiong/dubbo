@@ -63,6 +63,7 @@ public abstract class Proxy {
      * @return Proxy instance.
      */
     public static Proxy getProxy(Class<?>... ics) {
+        // 调用重载方法
         return getProxy(ClassUtils.getClassLoader(Proxy.class), ics);
     }
 
@@ -79,26 +80,30 @@ public abstract class Proxy {
         }
 
         StringBuilder sb = new StringBuilder();
+        // 遍历接口列表
         for (int i = 0; i < ics.length; i++) {
             String itf = ics[i].getName();
+            // 检测类型是否为接口
             if (!ics[i].isInterface()) {
                 throw new RuntimeException(itf + " is not a interface.");
             }
 
             Class<?> tmp = null;
             try {
+                // 重新加载接口类
                 tmp = Class.forName(itf, false, cl);
             } catch (ClassNotFoundException e) {
             }
-
+            // 检测接口是否相同，这里 tmp 有可能为空
             if (tmp != ics[i]) {
                 throw new IllegalArgumentException(ics[i] + " is not visible from class loader");
             }
-
+            // 拼接接口全限定名，分隔符为 ;
             sb.append(itf).append(';');
         }
 
         // use interface class name list as key.
+        // 使用拼接后的接口名作为 key
         String key = sb.toString();
 
         // get cache by class loader.
@@ -111,6 +116,7 @@ public abstract class Proxy {
         synchronized (cache) {
             do {
                 Object value = cache.get(key);
+                // 并发控制，保证只有一个线程可以进行后续操作
                 if (value instanceof Reference<?>) {
                     proxy = (Proxy) ((Reference<?>) value).get();
                     if (proxy != null) {
@@ -120,10 +126,12 @@ public abstract class Proxy {
 
                 if (value == PENDING_GENERATION_MARKER) {
                     try {
+                        // 其他线程在此处进行等待
                         cache.wait();
                     } catch (InterruptedException e) {
                     }
                 } else {
+                    // 放置标志位到缓存中，并跳出 while 循环进行后续操作
                     cache.put(key, PENDING_GENERATION_MARKER);
                     break;
                 }
@@ -222,6 +230,7 @@ public abstract class Proxy {
                 } else {
                     cache.put(key, new WeakReference<Proxy>(proxy));
                 }
+                // 唤醒其他等待线程
                 cache.notifyAll();
             }
         }

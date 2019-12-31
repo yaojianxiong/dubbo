@@ -72,6 +72,8 @@ public class Transporters {
         } else {
             handler = new ChannelHandlerDispatcher(handlers);
         }
+        // 获取 Transporter 自适应拓展类，并调用 connect 方法生成 Client 实例  ，默认NettyTransporter
+        //这里的handler的实现是new DecodeHandler(new HeaderExchangeHandler(handler)
         return getTransporter().connect(url, handler);
     }
 

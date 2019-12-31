@@ -59,6 +59,7 @@ public abstract class AbstractClient extends AbstractEndpoint implements Client 
         initExecutor(url);
 
         try {
+            //打开客户端 -->NettyClient实现
             doOpen();
         } catch (Throwable t) {
             close();

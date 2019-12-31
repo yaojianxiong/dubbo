@@ -78,7 +78,23 @@ public class NettyClient extends AbstractClient {
     public NettyClient(final URL url, final ChannelHandler handler) throws RemotingException {
     	// you can customize name and type of client thread pool by THREAD_NAME_KEY and THREADPOOL_KEY in CommonConstants.
     	// the handler will be warped: MultiMessageHandler->HeartbeatHandler->handler
+        //对handler进行封装
     	super(url, wrapChannelHandler(url, handler));
+    }
+
+    @Override
+    protected void connect() throws RemotingException {
+        super.connect();
+    }
+
+    @Override
+    public void received(org.apache.dubbo.remoting.Channel ch, Object msg) throws RemotingException {
+        super.received(ch, msg);
+    }
+
+    @Override
+    public void connected(org.apache.dubbo.remoting.Channel ch) throws RemotingException {
+        super.connected(ch);
     }
 
     /**
@@ -88,10 +104,11 @@ public class NettyClient extends AbstractClient {
      */
     @Override
     protected void doOpen() throws Throwable {
+        //把当前对象作为handler传入，实际上可能调的是当前对象里面适配的handler的方法
         final NettyClientHandler nettyClientHandler = new NettyClientHandler(getUrl(), this);
         bootstrap = new Bootstrap();
         bootstrap.group(nioEventLoopGroup)
-                .option(ChannelOption.SO_KEEPALIVE, true)
+                .option(ChannelOption.SO_KEEPALIVE, true)//指定客户端长连接
                 .option(ChannelOption.TCP_NODELAY, true)
                 .option(ChannelOption.ALLOCATOR, PooledByteBufAllocator.DEFAULT)
                 //.option(ChannelOption.CONNECT_TIMEOUT_MILLIS, getTimeout())
@@ -110,8 +127,9 @@ public class NettyClient extends AbstractClient {
 
                 NettyCodecAdapter adapter = new NettyCodecAdapter(getCodec(), getUrl(), NettyClient.this);
                 ch.pipeline()//.addLast("logging",new LoggingHandler(LogLevel.INFO))//for debug
-                        .addLast("decoder", adapter.getDecoder())
+                        .addLast("decoder", adapter.getDecoder())//设置编码解码 -->主要根据getCodec()
                         .addLast("encoder", adapter.getEncoder())
+                        //设置心跳处理器 //heartbeatInterval写空闲时间
                         .addLast("client-idle-handler", new IdleStateHandler(heartbeatInterval, 0, 0, MILLISECONDS))
                         .addLast("handler", nettyClientHandler);
 

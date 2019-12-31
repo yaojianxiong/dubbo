@@ -145,7 +145,7 @@ public class ProtocolFilterWrapper implements Protocol {
         if (UrlUtils.isRegistry(invoker.getUrl())) {
             return protocol.export(invoker);
         }
-        //buildInvokerChain  对invoker进行封装 构成建拦截器链
+        //buildInvokerChain  对invoker进行封装 构建拦截器链
         return protocol.export(buildInvokerChain(invoker, SERVICE_FILTER_KEY, CommonConstants.PROVIDER));
     }
 
@@ -154,6 +154,7 @@ public class ProtocolFilterWrapper implements Protocol {
         if (UrlUtils.isRegistry(url)) {
             return protocol.refer(type, url);
         }
+        //对invoker进行封装 构建consumer的拦截器链
         return buildInvokerChain(protocol.refer(type, url), REFERENCE_FILTER_KEY, CommonConstants.CONSUMER);
     }
 
